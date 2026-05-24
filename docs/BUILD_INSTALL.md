@@ -74,6 +74,12 @@ eas build --profile preview --platform android
 
 `preview` in `eas.json` already sets Vercel URLs.
 
+## Open meeting links in the app (Zoom-style)
+
+After deploying the latest **web** (`blumen_meet`) and installing a **new** EAS build, shared links like `https://blumen-meet.vercel.app/join/{roomId}` open the app when it is installed on Android.
+
+See `blumen_meet/docs/APP_LINKS.md` for verification and iOS setup.
+
 ---
 
 ## iOS

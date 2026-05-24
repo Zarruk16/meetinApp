@@ -1,5 +1,35 @@
 import type { ExpoConfig } from "expo/config";
 
+/** Inline helpers — Expo config runs as CJS and cannot import from src/*.ts */
+function getAppLinkHosts(): string[] {
+  const raw =
+    process.env.EXPO_PUBLIC_WEB_URL ||
+    process.env.EXPO_PUBLIC_API_URL ||
+    "https://blumen-meet.vercel.app";
+  try {
+    const host = new URL(raw).host;
+    return host ? [host] : ["blumen-meet.vercel.app"];
+  } catch {
+    return ["blumen-meet.vercel.app"];
+  }
+}
+
+function buildAndroidIntentFilters() {
+  return getAppLinkHosts().map((host) => ({
+    action: "VIEW" as const,
+    autoVerify: true,
+    data: [{ scheme: "https", host, pathPrefix: "/join" }],
+    category: ["BROWSABLE", "DEFAULT"] as const,
+  }));
+}
+
+function buildIosAssociatedDomains() {
+  return getAppLinkHosts().map((host) => `applinks:${host}`);
+}
+
+const appLinkHost = getAppLinkHosts()[0];
+const universalLinkOrigin = appLinkHost ? `https://${appLinkHost}` : "https://blumen-meet.vercel.app";
+
 const config: ExpoConfig = {
   name: "Blumen Meet",
   slug: "blumen-meet",
@@ -11,6 +41,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.blumenmeet.app",
+    associatedDomains: buildIosAssociatedDomains(),
     infoPlist: {
       UIBackgroundModes: ["audio", "voip", "fetch"],
       NSCameraUsageDescription: "Blumen Meet needs camera access for video meetings.",
@@ -21,6 +52,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: "com.blumenmeet.app",
+    intentFilters: buildAndroidIntentFilters(),
     adaptiveIcon: {
       backgroundColor: "#09090b",
       foregroundImage: "./assets/android-icon-foreground.png",
@@ -70,7 +102,7 @@ const config: ExpoConfig = {
     "@livekit/react-native-expo-plugin",
   ],
   extra: {
-    router: { origin: false },
+    router: { origin: universalLinkOrigin },
     eas: {
       projectId: "392ca9a4-b1ef-49d8-b660-b19cdcb2c8fa",
     },
