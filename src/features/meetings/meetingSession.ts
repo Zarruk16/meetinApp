@@ -65,6 +65,8 @@ export class MeetingSession {
     this.timer = setInterval(() => {
       const secs = Math.floor((Date.now() - this.startedAt) / 1000);
       if (Platform.OS === "android") {
+        // Update shade text only every 30s — avoids notification churn.
+        if (secs % 30 !== 0 && secs > 0) return;
         void updateOngoingCallNotification(
           `Meeting ${roomId.slice(0, 8)} · ${formatDuration(secs)}`,
           `${displayName} — tap to return`

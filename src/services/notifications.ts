@@ -1,17 +1,28 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-const ONGOING_CALL_ID = "ongoing-call";
+export const ONGOING_CALL_ID = "ongoing-call";
 const CALL_CHANNEL_ID = "blumen_meet_ongoing_call";
 
+function isOngoingCallNotification(
+  request: Notifications.NotificationRequest
+): boolean {
+  const id = request.identifier;
+  const type = request.content.data?.type;
+  return id === ONGOING_CALL_ID || type === "ongoing-call" || type === "ongoing-call-update";
+}
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (request) => {
+    const ongoing = isOngoingCallNotification(request);
+    return {
+      /** Ongoing call = sticky shade only — no heads-up popups or sounds on every tick. */
+      shouldShowBanner: !ongoing,
+      shouldShowList: true,
+      shouldPlaySound: !ongoing,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 export async function registerForPushNotifications() {
@@ -26,11 +37,12 @@ export async function registerForPushNotifications() {
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync(CALL_CHANNEL_ID, {
       name: "Ongoing meetings",
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
+      importance: Notifications.AndroidImportance.LOW,
+      vibrationPattern: [0],
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       bypassDnd: false,
       enableVibrate: false,
+      showBadge: false,
     });
   }
 
@@ -45,10 +57,11 @@ export async function showOngoingCallNotification(title: string, subtitle?: stri
       title: "Blumen Meet — in meeting",
       body: subtitle || title,
       sticky: true,
-      priority: Notifications.AndroidNotificationPriority.MAX,
+      priority: Notifications.AndroidNotificationPriority.LOW,
       categoryIdentifier: "call",
       channelId: CALL_CHANNEL_ID,
       autoDismiss: false,
+      data: { type: "ongoing-call" },
     },
     trigger: null,
     identifier: ONGOING_CALL_ID,
@@ -57,7 +70,20 @@ export async function showOngoingCallNotification(title: string, subtitle?: stri
 
 export async function updateOngoingCallNotification(title: string, subtitle?: string) {
   if (Platform.OS !== "android") return;
-  await showOngoingCallNotification(title, subtitle);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Blumen Meet — in meeting",
+      body: subtitle || title,
+      sticky: true,
+      priority: Notifications.AndroidNotificationPriority.LOW,
+      categoryIdentifier: "call",
+      channelId: CALL_CHANNEL_ID,
+      autoDismiss: false,
+      data: { type: "ongoing-call-update" },
+    },
+    trigger: null,
+    identifier: ONGOING_CALL_ID,
+  });
 }
 
 export async function dismissOngoingCallNotification() {

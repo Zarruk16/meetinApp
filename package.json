@@ -44,19 +44,26 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "patch-package": "^8.0.0",
+    "sharp": "^0.34.5",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start --dev-client",
     "start:go": "expo start --go",
-    "android": "JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home' ANDROID_HOME=${ANDROID_HOME:-$HOME/Library/Android/sdk} expo run:android",
+    "adb:reverse": "adb reverse tcp:3000 tcp:3000 && echo 'Port 3000 forwarded: emulator localhost → Mac'",
+    "android": "npm run adb:reverse 2>/dev/null; JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home' ANDROID_HOME=${ANDROID_HOME:-$HOME/Library/Android/sdk} expo run:android",
     "ios": "expo run:ios",
+    "ios:device": "expo run:ios --device",
+    "ios:release": "expo run:ios --device --configuration Release",
+    "ios:pod": "cd ios && pod install",
     "prebuild": "expo prebuild",
     "build:apk": "bash scripts/build-android-apk.sh",
     "build:android:eas": "eas build --profile preview --platform android",
     "build:ios:eas": "eas build --profile preview --platform ios",
     "build:ios:sim": "eas build --profile preview-simulator --platform ios",
     "postinstall": "patch-package",
+    "generate:brand": "node scripts/generate-brand-assets.mjs",
+    "sync:brand": "bash scripts/sync-native-brand.sh",
     "web": "expo start --web"
   },
   "private": true

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useSharedValue, withTiming, runOnJS } from "react-native-reanimated";
 import { useAuthStore } from "../src/store/authStore";
 import { IntroScreen } from "../src/screens/IntroScreen";
@@ -40,6 +41,10 @@ export default function AppEntryScreen() {
 
   const onIntroComplete = useCallback(() => {
     setIntroDone(true);
+  }, []);
+
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import { signInWithOAuth, getOAuthSetupHint, type OAuthProvider } from "../../sr
 import { useAuthStore } from "../../src/store/authStore";
 import { AuthScreenShell } from "../../src/components/auth/AuthScreenShell";
 import { SocialAuthButtons } from "../../src/components/auth/SocialAuthButtons";
+import { OAuthDevBanner } from "../../src/components/auth/OAuthDevBanner";
 import { ApiError } from "../../src/services/api";
 
 export default function LoginScreen() {
@@ -70,6 +71,7 @@ export default function LoginScreen() {
         </>
       }
     >
+      <OAuthDevBanner />
       <SocialAuthButtons
         loading={oauthLoading}
         onGoogle={() => onOAuth("google")}

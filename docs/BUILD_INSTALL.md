@@ -80,6 +80,22 @@ After deploying the latest **web** (`blumen_meet`) and installing a **new** EAS 
 
 See `blumen_meet/docs/APP_LINKS.md` for verification and iOS setup.
 
+## App icon & splash (native)
+
+JS reload does **not** update the launcher icon or cold-start splash. After changing `assets/` or `app.config.ts`:
+
+```bash
+npm run sync:brand
+npm run android
+```
+
+On the emulator/phone, **uninstall** the old app first if the launcher icon still looks like the default Expo grid — Android caches launcher icons.
+
+```bash
+adb uninstall com.blumenmeet.app
+npm run android
+```
+
 ---
 
 ## iOS

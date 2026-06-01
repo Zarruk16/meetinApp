@@ -41,6 +41,8 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.blumenmeet.app",
+    /** Same bloom logo as Android adaptive icon (regenerate with npm run sync:brand). */
+    icon: "./assets/icon.png",
     associatedDomains: buildIosAssociatedDomains(),
     infoPlist: {
       UIBackgroundModes: ["audio", "voip", "fetch"],
@@ -83,6 +85,13 @@ const config: ExpoConfig = {
       {
         backgroundColor: "#09090b",
         image: "./assets/splash-icon.png",
+        imageWidth: 220,
+        resizeMode: "contain",
+        android: {
+          image: "./assets/splash-icon.png",
+          imageWidth: 220,
+          resizeMode: "contain",
+        },
       },
     ],
     [
@@ -95,10 +104,11 @@ const config: ExpoConfig = {
     [
       "expo-notifications",
       {
-        icon: "./assets/icon.png",
+        icon: "./assets/splash-icon.png",
         color: "#7c3aed",
       },
     ],
+    "./plugins/withIosNoPushEntitlement.js",
     "@livekit/react-native-expo-plugin",
   ],
   extra: {

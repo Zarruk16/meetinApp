@@ -90,7 +90,7 @@ export function MeetingRoomContent({
   const participantId = useMemo(() => uuidv4(), []);
   const joinUrl = useMemo(() => getMeetingJoinUrl(roomId), [roomId]);
   const hostIdentity = useMemo(() => getHostIdentity(hostUserId), [hostUserId]);
-  const { phase: reconnectPhase } = useMeetingReconnect(connectionState);
+  const { phase: reconnectPhase, isReconnecting } = useMeetingReconnect(connectionState);
 
   const stageParticipants = useMemo(() => {
     const remotes = participants.filter((p) => !p.isLocal);
@@ -227,7 +227,7 @@ export function MeetingRoomContent({
   }, []);
 
   const connected = connectionState === ConnectionState.Connected;
-  const reconnecting = connectionState === ConnectionState.Reconnecting;
+  const reconnecting = isReconnecting;
 
   const advancedControls: AdvancedControl[] = [
     ...(isHost

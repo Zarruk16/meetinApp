@@ -1,5 +1,6 @@
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
+import { BrandMark } from "../brand/BrandMark";
 
 type Props = {
   scale: SharedValue<number>;
@@ -23,11 +24,7 @@ export function GlassLogoCard({ scale, opacity, glow }: Props) {
       <Animated.View style={[styles.halo, halo]} />
       <View style={styles.glass}>
         <View style={styles.innerGlow} />
-        <Image
-          source={require("../../../assets/splash-icon.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <BrandMark size={76} />
       </View>
     </Animated.View>
   );
@@ -59,9 +56,5 @@ const styles = StyleSheet.create({
   innerGlow: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(139, 92, 246, 0.12)",
-  },
-  logo: {
-    width: 76,
-    height: 76,
   },
 });

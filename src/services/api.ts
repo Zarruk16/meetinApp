@@ -26,7 +26,12 @@ export async function apiFetch<T>(
     if (token) reqHeaders.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, { ...rest, headers: reqHeaders });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...rest, headers: reqHeaders });
+  } catch {
+    throw new ApiError(`Could not reach ${env.apiUrl}. Check Wi‑Fi or API URL in .env`, 0);
+  }
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {

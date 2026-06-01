@@ -2,6 +2,7 @@ import "../global.css";
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { registerGlobals } from "@livekit/react-native";
@@ -12,6 +13,8 @@ import { registerVoipFromExpoToken } from "../src/features/voip";
 import { fetchMe } from "../src/services/auth";
 
 registerGlobals();
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const hydrate = useAuthStore((s) => s.hydrate);
