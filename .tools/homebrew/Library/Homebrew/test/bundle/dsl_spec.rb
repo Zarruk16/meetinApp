@@ -1,0 +1,188 @@
+# typed: true
+# frozen_string_literal: true
+
+require "bundle"
+require "bundle/dsl"
+
+RSpec.describe Homebrew::Bundle::Dsl do
+  let(:klass) { Homebrew::Bundle::Dsl }
+
+  def dsl_from_string(string)
+    klass.new(StringIO.new(string))
+  end
+
+  context "with a DSL example" do
+    subject(:dsl) do
+      dsl_from_string <<~EOS
+        # frozen_string_literal: true
+        cask_args appdir: '/Applications'
+        tap 'homebrew/cask'
+        tap 'telemachus/brew', 'https://telemachus@bitbucket.org/telemachus/brew.git'
+        tap 'auto/update', 'https://bitbucket.org/auto/update.git'
+        brew 'imagemagick'
+        brew 'mysql@5.6', restart_service: true, link: true, conflicts_with: ['mysql']
+        brew 'emacs', args: ['with-cocoa', 'with-gnutls'], link: :overwrite
+        cask 'google-chrome'
+        cask 'java' unless system '/usr/libexec/java_home --failfast'
+        cask 'firefox', args: { appdir: '~/my-apps/Applications' }
+        mas '1Password', id: 443987910
+        vscode 'GitHub.codespaces'
+        winget 'PowerToys', id: 'XP89DCGQ3K6VLD', source: 'msstore'
+        go 'github.com/charmbracelet/crush'
+        cargo 'ripgrep'
+        uv 'mkdocs', with: ['mkdocs-material<10']
+      EOS
+    end
+
+    before do
+      allow_any_instance_of(klass).to receive(:system)
+        .with("/usr/libexec/java_home --failfast")
+        .and_return(false)
+    end
+
+    it "processes input" do
+      # Keep in sync with the README
+      expect(dsl.cask_arguments).to eql(appdir: "/Applications")
+      expect(dsl.entries[0].name).to eql("homebrew/cask")
+      expect(dsl.entries[1].name).to eql("telemachus/brew")
+      expect(dsl.entries[1].options).to eql(clone_target: "https://telemachus@bitbucket.org/telemachus/brew.git")
+      expect(dsl.entries[2].options).to eql(clone_target: "https://bitbucket.org/auto/update.git")
+      expect(dsl.entries[3].name).to eql("imagemagick")
+      expect(dsl.entries[4].name).to eql("mysql@5.6")
+      expect(dsl.entries[4].options).to eql(restart_service: true, link: true, conflicts_with: ["mysql"])
+      expect(dsl.entries[5].name).to eql("emacs")
+      expect(dsl.entries[5].options).to eql(args: ["with-cocoa", "with-gnutls"], link: :overwrite)
+      expect(dsl.entries[6].name).to eql("google-chrome")
+      expect(dsl.entries[7].name).to eql("java")
+      expect(dsl.entries[8].name).to eql("firefox")
+      expect(dsl.entries[8].options).to eql(args: { appdir: "~/my-apps/Applications" }, full_name: "firefox")
+      expect(dsl.entries[9].name).to eql("1Password")
+      expect(dsl.entries[9].options).to eql(id: 443_987_910)
+      expect(dsl.entries[10].name).to eql("GitHub.codespaces")
+      expect(dsl.entries[11].name).to eql("PowerToys")
+      expect(dsl.entries[11].options).to eql(id: "XP89DCGQ3K6VLD", source: "msstore")
+      expect(dsl.entries[12].name).to eql("github.com/charmbracelet/crush")
+      expect(dsl.entries[13].name).to eql("ripgrep")
+      expect(dsl.entries[14].name).to eql("mkdocs")
+      expect(dsl.entries[14].options).to eql(with: ["mkdocs-material<10"])
+    end
+  end
+
+  context "with multiple cask_args" do
+    subject(:dsl) do
+      dsl_from_string <<~EOS
+        cask_args appdir: '/global-apps'
+        cask_args require_sha: true
+        cask_args appdir: '~/my-apps'
+      EOS
+    end
+
+    it "merges the arguments" do
+      expect(dsl.cask_arguments).to eql(appdir: "~/my-apps", require_sha: true)
+    end
+  end
+
+  context "with flatpak entries" do
+    it "processes flatpak without options" do
+      dsl = dsl_from_string 'flatpak "org.gnome.Calculator"'
+      expect(dsl.entries[0].name).to eql("org.gnome.Calculator")
+      expect(dsl.entries[0].options[:remote]).to eql("flathub")
+    end
+
+    it "processes flatpak with remote option" do
+      dsl = dsl_from_string 'flatpak "com.custom.App", remote: "custom-repo"'
+      expect(dsl.entries[0].name).to eql("com.custom.App")
+      expect(dsl.entries[0].options[:remote]).to eql("custom-repo")
+    end
+
+    it "processes flatpak with explicit flathub remote" do
+      dsl = dsl_from_string 'flatpak "org.gnome.Calculator", remote: "flathub"'
+      expect(dsl.entries[0].name).to eql("org.gnome.Calculator")
+      expect(dsl.entries[0].options[:remote]).to eql("flathub")
+    end
+
+    it "processes flatpak with URL remote" do
+      dsl = dsl_from_string 'flatpak "org.godotengine.Godot", remote: "https://dl.flathub.org/beta-repo/"'
+      expect(dsl.entries[0].name).to eql("org.godotengine.Godot")
+      expect(dsl.entries[0].options[:remote]).to eql("https://dl.flathub.org/beta-repo/")
+    end
+  end
+
+  context "with extension entries" do
+    it "accepts positional option hashes for extensions" do
+      dsl = dsl_from_string 'uv "mkdocs", { with: ["mkdocs-material<10"] }'
+      expect(dsl.entries[0].name).to eql("mkdocs")
+      expect(dsl.entries[0].options).to eql(with: ["mkdocs-material<10"])
+    end
+  end
+
+  context "with invalid input" do
+    it "handles completely invalid code" do
+      expect { dsl_from_string "abcdef" }.to raise_error(RuntimeError)
+    end
+
+    it "handles valid commands but with invalid options" do
+      expect { dsl_from_string "brew 1" }.to raise_error(RuntimeError)
+      expect { dsl_from_string "cask 1" }.to raise_error(RuntimeError)
+      expect { dsl_from_string "tap 1" }.to raise_error(RuntimeError)
+      expect { dsl_from_string "cask_args ''" }.to raise_error(RuntimeError)
+    end
+
+    it "errors on bad options" do
+      expect { dsl_from_string "brew 'foo', ['bad_option']" }.to raise_error(RuntimeError)
+      expect { dsl_from_string "cask 'foo', ['bad_option']" }.to raise_error(RuntimeError)
+      expect { dsl_from_string "tap 'foo', ['bad_clone_target']" }.to raise_error(RuntimeError)
+      expect { dsl_from_string "flatpak 'foo', ['bad_option']" }.to raise_error(RuntimeError)
+    end
+
+    it "errors on unknown go options" do
+      expect do
+        dsl_from_string 'go "github.com/charmbracelet/crush", with: ["github.com/charmbracelet/gum"]'
+      end.to raise_error(RuntimeError, /unknown options\(\[:with\]\) for go/)
+    end
+
+    it "errors on invalid uv with options" do
+      expect do
+        dsl_from_string 'uv "mkdocs", with: "mkdocs-material<10"'
+      end.to raise_error(RuntimeError, /options\[:with\].*Array of String objects/)
+      expect do
+        dsl_from_string 'uv "mkdocs", with: [1]'
+      end.to raise_error(RuntimeError, /options\[:with\].*Array of String objects/)
+      expect do
+        dsl_from_string 'uv "mkdocs", with: false'
+      end.to raise_error(RuntimeError, /options\[:with\].*Array of String objects/)
+    end
+
+    it "errors on invalid winget options" do
+      expect do
+        dsl_from_string 'winget "PowerToys", id: 123'
+      end.to raise_error(RuntimeError, /options\[:id\].*String object/)
+      expect do
+        dsl_from_string 'winget "PowerToys", source: "chocolatey"'
+      end.to raise_error(RuntimeError, /options\[:source\].*one of/)
+      expect do
+        dsl_from_string 'winget "PowerToys", interactive: true'
+      end.to raise_error(RuntimeError, /unknown options\(\[:interactive\]\) for winget/)
+      expect do
+        dsl_from_string 'winget "PowerToys", elevated: true'
+      end.to raise_error(RuntimeError, /unknown options\(\[:elevated\]\) for winget/)
+    end
+  end
+
+  it ".sanitize_brew_name" do
+    expect(klass.send(:sanitize_brew_name, "homebrew/homebrew/foo")).to eql("foo")
+    expect(klass.send(:sanitize_brew_name, "homebrew/homebrew-bar/foo")).to eql("homebrew/bar/foo")
+    expect(klass.send(:sanitize_brew_name, "homebrew/bar/foo")).to eql("homebrew/bar/foo")
+    expect(klass.send(:sanitize_brew_name, "foo")).to eql("foo")
+  end
+
+  it ".sanitize_tap_name" do
+    expect(klass.send(:sanitize_tap_name, "homebrew/homebrew-foo")).to eql("homebrew/foo")
+    expect(klass.send(:sanitize_tap_name, "homebrew/foo")).to eql("homebrew/foo")
+  end
+
+  it ".sanitize_cask_name" do
+    expect(klass.send(:sanitize_cask_name, "homebrew/cask-versions/adoptopenjdk8")).to eql("adoptopenjdk8")
+    expect(klass.send(:sanitize_cask_name, "adoptopenjdk8")).to eql("adoptopenjdk8")
+  end
+end

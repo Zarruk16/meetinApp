@@ -1,0 +1,34 @@
+# typed: false
+# frozen_string_literal: true
+
+require "formula_installer"
+require "test/support/fixtures/testball"
+
+RSpec.describe FormulaInstaller do
+  subject(:keg) { klass.new(keg_path) }
+
+  let(:klass) { FormulaInstaller }
+
+  include FileUtils
+
+  describe "#fresh_install" do
+    subject(:formula_installer) { klass.new(Testball.new) }
+
+    it "is true by default" do
+      formula = Testball.new
+      expect(formula_installer.fresh_install?(formula)).to be true
+    end
+
+    it "is false in developer mode" do
+      formula = Testball.new
+      allow(Homebrew::EnvConfig).to receive_messages(developer?: true)
+      expect(formula_installer.fresh_install?(formula)).to be false
+    end
+
+    it "is false on outdated releases" do
+      formula = Testball.new
+      allow(OS::Mac.version).to receive_messages(outdated_release?: true)
+      expect(formula_installer.fresh_install?(formula)).to be false
+    end
+  end
+end

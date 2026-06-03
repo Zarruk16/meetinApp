@@ -1,0 +1,228 @@
+# typed: true
+# frozen_string_literal: true
+
+require "utils"
+
+RSpec.describe Utils do
+  let(:klass) { Utils }
+
+  describe ".deconstantize" do
+    it "removes the rightmost segment from the constant expression in the string" do
+      expect(klass.deconstantize("Net::HTTP")).to eq("Net")
+      expect(klass.deconstantize("::Net::HTTP")).to eq("::Net")
+      expect(klass.deconstantize("String")).to eq("")
+      expect(klass.deconstantize("::String")).to eq("")
+    end
+
+    it "returns an empty string if the namespace is empty" do
+      expect(klass.deconstantize("")).to eq("")
+      expect(klass.deconstantize("::")).to eq("")
+    end
+  end
+
+  describe ".demodulize" do
+    it "removes the module part from the expression in the string" do
+      expect(klass.demodulize("Foo::Bar")).to eq("Bar")
+    end
+
+    it "returns the string if it does not contain a module expression" do
+      expect(klass.demodulize("FooBar")).to eq("FooBar")
+    end
+
+    it "returns an empty string if the namespace is empty" do
+      expect(klass.demodulize("")).to eq("")
+      expect(klass.demodulize("::")).to eq("")
+    end
+
+    it "raise an ArgumentError when passed nil" do
+      expect { klass.demodulize(nil) }.to raise_error(ArgumentError)
+    end
+  end
+
+  describe ".name_from_full_name" do
+    it "returns the package name for a full name" do
+      expect(klass.name_from_full_name("homebrew/core/wget")).to eq("wget")
+    end
+
+    it "returns untapped names unchanged" do
+      expect(klass.name_from_full_name("wget")).to eq("wget")
+    end
+
+    it "does not treat taps as full names" do
+      expect(klass.name_from_full_name("homebrew/core")).to eq("homebrew/core")
+    end
+  end
+
+  describe ".tap_from_full_name" do
+    it "returns the tap for a full name" do
+      expect(klass.tap_from_full_name("homebrew/core/wget")).to eq("homebrew/core")
+    end
+
+    it "returns nil for untapped names" do
+      expect(klass.tap_from_full_name("wget")).to be_nil
+    end
+
+    it "returns nil for tap names" do
+      expect(klass.tap_from_full_name("homebrew/core")).to be_nil
+    end
+  end
+
+  specify ".parse_author!" do
+    parse_error_msg = /Unable to parse name and email/
+
+    expect(klass.parse_author!("John Doe <john.doe@example.com>"))
+      .to eq({ name: "John Doe", email: "john.doe@example.com" })
+    expect { klass.parse_author!("") }
+      .to raise_error(parse_error_msg)
+    expect { klass.parse_author!("John Doe") }
+      .to raise_error(parse_error_msg)
+    expect { klass.parse_author!("<john.doe@example.com>") }
+      .to raise_error(parse_error_msg)
+  end
+
+  describe ".pluralize" do
+    it "combines the stem with the default suffix based on the count" do
+      expect(klass.pluralize("foo", 0)).to eq("foos")
+      expect(klass.pluralize("foo", 1)).to eq("foo")
+      expect(klass.pluralize("foo", 2)).to eq("foos")
+    end
+
+    it "combines the stem with the singular suffix based on the count" do
+      expect(klass.pluralize("foo", 0, singular: "o")).to eq("foos")
+      expect(klass.pluralize("foo", 1, singular: "o")).to eq("fooo")
+      expect(klass.pluralize("foo", 2, singular: "o")).to eq("foos")
+    end
+
+    it "combines the stem with the plural suffix based on the count" do
+      expect(klass.pluralize("foo", 0, plural: "es")).to eq("fooes")
+      expect(klass.pluralize("foo", 1, plural: "es")).to eq("foo")
+      expect(klass.pluralize("foo", 2, plural: "es")).to eq("fooes")
+    end
+
+    it "combines the stem with the singular and plural suffix based on the count" do
+      expect(klass.pluralize("foo", 0, singular: "o", plural: "es")).to eq("fooes")
+      expect(klass.pluralize("foo", 1, singular: "o", plural: "es")).to eq("fooo")
+      expect(klass.pluralize("foo", 2, singular: "o", plural: "es")).to eq("fooes")
+    end
+
+    it "includes the count when requested" do
+      expect(klass.pluralize("foo", 0, include_count: true)).to eq("0 foos")
+      expect(klass.pluralize("foo", 1, include_count: true)).to eq("1 foo")
+      expect(klass.pluralize("foo", 2, include_count: true)).to eq("2 foos")
+    end
+  end
+
+  describe ".underscore" do
+    # commented out entries require acronyms inflections
+    let(:words) do
+      [
+        ["API", "api"],
+        ["APIController", "api_controller"],
+        ["Nokogiri::HTML", "nokogiri/html"],
+        # ["HTTPAPI", "http_api"],
+        ["HTTP::Get", "http/get"],
+        ["SSLError", "ssl_error"],
+        # ["RESTful", "restful"],
+        # ["RESTfulController", "restful_controller"],
+        # ["Nested::RESTful", "nested/restful"],
+        # ["IHeartW3C", "i_heart_w3c"],
+        # ["PhDRequired", "phd_required"],
+        # ["IRoRU", "i_ror_u"],
+        # ["RESTfulHTTPAPI", "restful_http_api"],
+        # ["HTTP::RESTful", "http/restful"],
+        # ["HTTP::RESTfulAPI", "http/restful_api"],
+        # ["APIRESTful", "api_restful"],
+        ["Capistrano", "capistrano"],
+        ["CapiController", "capi_controller"],
+        ["HttpsApis", "https_apis"],
+        ["Html5", "html5"],
+        ["Restfully", "restfully"],
+        ["RoRails", "ro_rails"],
+      ]
+    end
+
+    it "converts strings to underscore case" do
+      words.each do |camel, under|
+        expect(klass.underscore(camel)).to eq(under)
+        expect(klass.underscore(under)).to eq(under)
+      end
+    end
+  end
+
+  describe ".convert_to_string_or_symbol" do
+    specify(:aggregate_failures) do
+      expect(klass.convert_to_string_or_symbol(":example")).to eq(:example)
+      expect(klass.convert_to_string_or_symbol("example")).to eq("example")
+    end
+  end
+
+  describe ".deep_stringify_symbols and .deep_unstringify_symbols" do
+    it "converts all symbols in nested hashes and arrays", :aggregate_failures do
+      with_symbols = {
+        a: :symbol_a,
+        b: {
+          c: :symbol_c,
+          d: ["string_d", :symbol_d],
+        },
+        e: [:symbol_e1, { f: :symbol_f }],
+        g: "string_g",
+        h: ":not_a_symbol",
+        i: "\\also not a symbol", # literal: "\also not a symbol"
+      }
+
+      without_symbols = {
+        ":a" => ":symbol_a",
+        ":b" => {
+          ":c" => ":symbol_c",
+          ":d" => ["string_d", ":symbol_d"],
+        },
+        ":e" => [":symbol_e1", { ":f" => ":symbol_f" }],
+        ":g" => "string_g",
+        ":h" => "\\:not_a_symbol",       # literal: "\:not_a_symbol"
+        ":i" => "\\\\also not a symbol", # literal: "\\also not a symbol"
+      }
+
+      expect(klass.deep_stringify_symbols(with_symbols)).to eq(without_symbols)
+      expect(klass.deep_unstringify_symbols(without_symbols)).to eq(with_symbols)
+    end
+  end
+
+  describe ".deep_compact_blank" do
+    it "removes blank values from nested hashes and arrays" do
+      input = {
+        a: "",
+        b: [],
+        c: {},
+        d: {
+          e: "value",
+          f: nil,
+          g: {
+            h: "",
+            i: true,
+            j: {
+              k: nil,
+              l: "",
+            },
+          },
+          m: ["", nil],
+        },
+        n: [nil, "", 2, [], { o: nil }],
+        p: false,
+        q: 0,
+        r: 0.0,
+      }
+
+      expected_output = {
+        d: {
+          e: "value",
+          g: {
+            i: true,
+          },
+        },
+        n: [2],
+      }
+
+      expect(klass.deep_compact_blank(input)).to eq(expected_output)
+    end
+  end
+end
